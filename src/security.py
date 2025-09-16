@@ -1,8 +1,12 @@
 import os
 from datetime import datetime, timedelta
 from typing import Optional
+
+from dotenv import load_dotenv
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+
+load_dotenv()
 
 # Настройки JWT
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")

@@ -1,17 +1,26 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.DB.database import create_tables, get_db
+from src.DB.models import UserOrm
 from src.dependencies import get_current_user, get_refresh_token_user
 from src.repository import get_user_by_email, get_user_by_login, create_user, authenticate_user
 
 from src.schemas import UserResponse, UserCreate, Token, UserLogin
 from src.security import create_token_pair
 from starlette.responses import FileResponse
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 @asynccontextmanager
@@ -29,7 +38,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,7 +58,7 @@ async def root():
     return FileResponse("static/index.html")
 
 # Users routers
-@app.post("/auth/register", response_model=UserResponse)
+@user_router.post("/auth/register", response_model=UserResponse)
 async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     # Проверка существования пользователя
     if await get_user_by_email(db, user.email):
@@ -60,7 +69,7 @@ async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     return await create_user(db, user)
 
 
-@app.post("/auth/login", response_model=Token)
+@user_router.post("/auth/login", response_model=Token)
 async def login_user(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     user = await authenticate_user(db, user_data.login, user_data.password)
     if not user:
@@ -69,24 +78,35 @@ async def login_user(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
             detail="Incorrect login or password",
         )
 
-    return create_token_pair(user.username)
+    return create_token_pair(user.login)
 
 
-@app.post("/auth/refresh", response_model=Token)
+@user_router.post("/auth/refresh", response_model=Token)
 async def refresh_token(token_data: Token, db: AsyncSession = Depends(get_db)):
     user = await get_refresh_token_user(token_data.refresh_token, db)
     return create_token_pair(user.username)
 
 
-@app.get("/users/me", response_model=UserResponse)
+@user_router.get("/users/me", response_model=UserResponse)
 async def read_users_me(current_user: UserResponse = Depends(get_current_user)):
     return current_user
 
 
-@app.get("/protected")
+@user_router.get("/protected")
 async def protected_route(current_user: UserResponse = Depends(get_current_user)):
     return {"message": f"Hello {current_user.username}!", "user_id": current_user.id}
 
+@user_router.get("/debug/users")
+async def debug_users(db: AsyncSession = Depends(get_db)):
+    users = await db.execute(select(UserOrm))
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "login": u.login,
+            "email": u.email
+        } for u in users.scalars().all()
+    ]
 
 app.include_router(main_router)
 app.include_router(user_router)
@@ -94,3 +114,8 @@ app.include_router(user_router)
 # myvenv\Scripts\activate
 #
 # uvicorn main:app --reload
+
+# {
+#   "login": "AleKolar_33",
+#   "password": "Mn1471979!_Mn"
+# }

@@ -1,12 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from src.DB.models import UserOrm
-from src.security import get_password_hash
+
 
 from typing import Optional
 
-
+from src.DB.models import UserOrm
+from src.security import get_password_hash, verify_password
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[UserOrm]:
@@ -42,3 +42,6 @@ async def authenticate_user(db: AsyncSession, login: str, password: str) -> Opti
     if not verify_password(password, user.hashed_password):
         return None
     return user
+
+
+
