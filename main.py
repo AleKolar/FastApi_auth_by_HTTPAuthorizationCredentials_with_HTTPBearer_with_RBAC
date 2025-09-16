@@ -32,7 +32,16 @@ async def lifespan(app: FastAPI):
     print("🛑 Приложение завершает работу")
 app = FastAPI(
     title="JWT Auth API",
-    lifespan=lifespan
+    lifespan=lifespan,
+    swagger_ui_parameters={
+        "persistAuthorization": True,  # Сохраняет авторизацию между перезагрузками
+        "tryItOutEnabled": True,       # Включает кнопку "Try it out" по умолчанию
+        "displayRequestDuration": True, # Показывает время выполнения запросов
+        # "docExpansion": "none",           # Сворачивает документацию по умолчанию
+        # "filter": True,                   # Включает поиск по API
+        # "showExtensions": True,           # Показывает расширения
+        # "showCommonExtensions": True,     # Показывает common extensions
+    }
 )
 
 # CORS middleware
@@ -66,7 +75,11 @@ async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     if await get_user_by_login(db, user.login):
         raise HTTPException(status_code=400, detail="Login already taken")
 
-    return await create_user(db, user)
+    user_db = await create_user(db, user)
+    return {
+        "message": "New user created",
+        "user": UserResponse.model_validate(user_db)  # Опционально
+    }
 
 
 @user_router.post("/auth/login", response_model=Token)

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src import schemas
 from src.DB.database import get_db
 from src.DB.models import UserOrm
-from src.repository import get_user_by_username, get_user_by_login
+from src.repository import get_user_by_login
 from src.schemas import UserResponse
 from src.security import verify_access_token, verify_refresh_token
 

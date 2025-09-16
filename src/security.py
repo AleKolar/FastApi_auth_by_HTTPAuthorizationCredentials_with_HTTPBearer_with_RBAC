@@ -15,8 +15,10 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7))
 
+# ✅ bcrypt уже имеет защиту от timing attacks
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# ✅ bcrypt уже имеет защиту от timing attacks
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Проверяет соответствие пароля и хеша"""
     return pwd_context.verify(plain_password, hashed_password)
@@ -25,6 +27,9 @@ def get_password_hash(password: str) -> str:
     """Создает хеш пароля"""
     return pwd_context.hash(password)
 
+# Почему НЕ нужно добавлять compare_digest()✅ JWT защищены HMAC подписью (HS256)
+# jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+# # Автоматически проверяет подпись и предотвращает timing attacks
 def _create_token(
     data: dict,
     secret: str,
@@ -47,6 +52,9 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
     delta = expires_delta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     return _create_token(data, REFRESH_SECRET_KEY, delta, "refresh")
 
+# Почему НЕ нужно добавлять compare_digest()✅ JWT защищены HMAC подписью (HS256)
+# jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+# # Автоматически проверяет подпись и предотвращает timing attacks
 def verify_access_token(token: str) -> Optional[dict]:
     """Проверяет и декодирует access token"""
     try:
@@ -55,6 +63,9 @@ def verify_access_token(token: str) -> Optional[dict]:
     except JWTError:
         return None
 
+# Почему НЕ нужно добавлять compare_digest()✅ JWT защищены HMAC подписью (HS256)
+# jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+# # Автоматически проверяет подпись и предотвращает timing attacks
 def verify_refresh_token(token: str) -> Optional[dict]:
     """Проверяет и декодирует refresh token"""
     try:
