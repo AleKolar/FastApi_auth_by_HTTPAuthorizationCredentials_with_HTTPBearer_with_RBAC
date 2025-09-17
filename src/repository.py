@@ -6,14 +6,14 @@ from typing import Optional, Dict
 from src.DB.models import UserOrm
 from src.security import get_password_hash, verify_password
 
-# !!! Пока не надо !!
-# async def get_user_by_email(db: AsyncSession, email: str) -> Optional[UserOrm]:
-#     result = await db.execute(select(UserOrm).where(UserOrm.email == email))
-#     return result.scalar_one_or_none()
-#
-# async def get_user_by_username(db: AsyncSession, username: str): # -> Optional[UserOrm]:
-#     result = await db.execute(select(UserOrm).where(UserOrm.username == username))
-#     return result.scalar_one_or_none()
+
+async def get_user_by_email(db: AsyncSession, email: str) -> Optional[UserOrm]:
+    result = await db.execute(select(UserOrm).where(UserOrm.email == email))
+    return result.scalar_one_or_none()
+
+async def get_user_by_username(db: AsyncSession, username: str): # -> Optional[UserOrm]:
+    result = await db.execute(select(UserOrm).where(UserOrm.username == username))
+    return result.scalar_one_or_none()
 
 async def get_user_by_login(db: AsyncSession, login: str) -> Optional[UserOrm]:
     result = await db.execute(select(UserOrm).where(UserOrm.login == login))

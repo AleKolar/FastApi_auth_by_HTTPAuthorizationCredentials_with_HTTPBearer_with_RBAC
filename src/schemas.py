@@ -3,6 +3,24 @@ import uuid
 from pydantic import BaseModel, Field, ConfigDict, field_validator, computed_field
 from datetime import datetime
 
+# Будем возвращать валидированный объект Pydantic CommonHeaders
+# с заголовками + message + timestamp
+class CommonHeaders(BaseModel):
+    model_config = ConfigDict(extra='allow')
+
+    user_agent: str | None = Field(None, alias="User-Agent")
+    accept_language: str | None = Field(None, alias="Accept-Language")
+    x_server_time: datetime = Field(default_factory=datetime.now)
+    message: str = "Добро пожаловать! Ваши заголовки успешно обработаны."
+
+    @field_validator('accept_language')
+    def validate_pattern(cls, v: str) -> str:
+        pattern = "en-US,ru-RU,en;q=0.9,es;q=0.8"
+        if v != pattern:
+            raise ValueError(f"Accept-Language does not match pattern: {pattern}")
+        return v
+
+
 LOGIN_PATTERN = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d_]{4,}$"
 
 class UserBase(BaseModel):

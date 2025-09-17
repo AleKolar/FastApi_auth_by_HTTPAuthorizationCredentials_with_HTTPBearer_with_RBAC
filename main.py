@@ -1,27 +1,33 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime
 
-from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, status, APIRouter, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src import schemas
 from src.DB.database import create_tables, get_db
 from src.DB.models import UserOrm
 from src.dependencies import get_current_user, get_refresh_token_user
-from src.repository import get_user_by_email, get_user_by_login, create_user, authenticate_user
+from src.repository import get_user_by_login, create_user, authenticate_user, get_user_by_email
 
 from src.schemas import UserResponse, UserCreate, Token, UserLogin
 from src.security import create_token_pair
 from starlette.responses import FileResponse
+
+# Для разработки: "ENVIRONMENT" == "development"
+LOG_LEVEL = "DEBUG" if os.getenv("ENVIRONMENT") == "development" else "INFO"
+logging.basicConfig(level=LOG_LEVEL, format='...')
 
 # Настройка логирования
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -54,6 +60,7 @@ app.add_middleware(
 )
 
 main_router = APIRouter(tags=["main"])
+header_router = APIRouter(tags=["headers"], prefix="/headers")
 user_router = APIRouter(tags=["users"], prefix="/users")
 
 # Main routers
@@ -65,6 +72,76 @@ async def health():
 @main_router.get("/")
 async def root():
     return FileResponse("static/index.html")
+
+# !!! Header !!!
+# Возвращает произвольный JSON dict , без валидации, без message, без timestamp
+@app.get("/headers/v1")
+async def get_headers(
+        user_agent: str | None = Header(None, alias="User-Agent"),
+        accept_language: str | None = Header(None, alias="Accept-Language")
+):
+    # Проверяем, что заголовки присутствуют
+    if user_agent is None:
+        raise HTTPException(
+            status_code=400,
+            detail="User-Agent header is required"
+        )
+
+    if accept_language is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Accept-Language header is required"
+        )
+
+    # Возвращаем заголовки в формате JSON
+    return {
+        "User-Agent": user_agent,
+        "Accept-Language": accept_language
+    }
+
+# Возвращает валидированный объект Pydantic CommonHeaders
+# с заголовками + message + timestamp
+@app.get("/headers", response_model=schemas.CommonHeaders)
+async def get_headers(
+    user_agent: str | None = Header(None, alias="User-Agent"),
+    accept_language: str | None = Header(None, alias="Accept-Language")
+):
+    # 1. Проверяем обязательные заголовки
+    if user_agent is None:
+        raise HTTPException(
+            status_code=400,
+            detail="User-Agent header is required"
+        )
+
+    if accept_language is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Accept-Language header is required"
+        )
+
+    # 2. Устанавливаем сообщение (правильное обращение)
+    final_message = "Добро пожаловать! Ваши заголовки успешно обработаны."
+
+    # 3. Создаем объект модели со ВСЕМИ полями
+    headers = schemas.CommonHeaders(
+        user_agent=user_agent,
+        accept_language=accept_language,
+        message=final_message,
+        x_server_time=datetime.now()  # ← Добавляем timestamp
+    )
+
+    # 4. Проверяем паттерн (используем значение)
+    try:
+        is_valid = headers.validate_pattern  # ← Присваиваем значение!
+        if is_valid:
+            logger.info("Accept-Language соответствует паттерну")
+        else:
+            logger.warning("Accept-Language не соответствует паттерну")
+    except ValueError as e:
+        logger.warning(f"Accept-Language не соответствует паттерну: {e}")
+
+    # 5. Возвращаем объект модели
+    return headers
 
 # Users routers
 @user_router.post("/auth/register", response_model=UserResponse)
@@ -86,11 +163,13 @@ async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
 async def login_user(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     user = await authenticate_user(db, user_data.login, user_data.password)
     if not user:
+        logger.warning(f"Failed login attempt for: {user_data.login}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect login or password",
         )
 
+    logger.info(f"Successful login for: {user_data.login}")
     return create_token_pair(user.login)
 
 
@@ -121,9 +200,16 @@ async def debug_users(db: AsyncSession = Depends(get_db)):
         } for u in users.scalars().all()
     ]
 
+# Для middleware, для логирования запросов
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    response = await call_next(request)
+    logger.info(f"Response: {response.status_code}")
+    return response
 app.include_router(main_router)
 app.include_router(user_router)
-
+app.include_router(header_router)
 # myvenv\Scripts\activate
 #
 # uvicorn main:app --reload
