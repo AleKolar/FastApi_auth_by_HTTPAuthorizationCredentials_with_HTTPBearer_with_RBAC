@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+
 load_dotenv()
 
 # Настройки JWT
@@ -26,6 +27,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """Создает хеш пароля"""
     return pwd_context.hash(password)
+
+# 🔐 Новые функции для работы с refresh токенами, после того, как в БД стали хранить token_hash
+def get_refresh_token_hash(refresh_token: str) -> str:
+    """Создает хеш refresh токена (аналогично паролю)"""
+    return pwd_context.hash(refresh_token)
+
+# 🔐 Новые функции для работы с refresh токенами, после того, как в БД стали хранить token_hash
+def verify_refresh_token_hash(provided_token: str, stored_hash: str) -> bool:
+    """Проверяет соответствие refresh токена и хеша"""
+    return pwd_context.verify(provided_token, stored_hash)
 
 # Почему НЕ нужно добавлять compare_digest()✅ JWT защищены HMAC подписью (HS256)
 # jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -74,11 +85,6 @@ def verify_refresh_token(token: str) -> Optional[dict]:
     except JWTError:
         return None
 
-def create_token_pair(username: str) -> dict:
-    """Создает пару access и refresh токенов"""
-    return {
-        "access_token": create_access_token(data={"sub": username}),
-        "refresh_token": create_refresh_token(data={"sub": username}),
-        "token_type": "bearer"
-    }
+
+
 

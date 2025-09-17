@@ -70,10 +70,16 @@ class UserResponse(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-class Token(BaseModel):
-    access_token: str
+# Token
+class TokenRefresh(BaseModel):
     refresh_token: str
-    token_type: str
 
+class Token(TokenRefresh):
+    access_token: str
+    token_type: str = "bearer"
+
+# Для данных в токене (опционально)
 class TokenData(BaseModel):
     username: str | None = None
+    exp: datetime | None = None
+    type: str | None = None  # "access" или "refresh"

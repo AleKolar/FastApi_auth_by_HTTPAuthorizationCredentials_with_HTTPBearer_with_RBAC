@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import List
 
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Integer, String, DateTime, UUID, Boolean, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import Integer, String, DateTime, UUID, Boolean, func, ForeignKey
 
 
 class Model(DeclarativeBase):
@@ -24,3 +25,22 @@ class UserOrm(Model):
         DateTime(timezone=True),
         server_default=func.now()
     )
+
+    refresh_tokens: Mapped[List["RefreshTokenOrm"]] = relationship("RefreshTokenOrm", back_populates="user")
+
+
+class RefreshTokenOrm(Model):
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    token_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+
+    # Связь с пользователем
+    user: Mapped["UserOrm"] = relationship("UserOrm", back_populates="refresh_tokens")

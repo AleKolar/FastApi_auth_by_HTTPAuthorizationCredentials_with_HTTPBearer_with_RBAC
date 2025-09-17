@@ -12,6 +12,7 @@ from src.repository import get_user_by_login
 from src.schemas import UserResponse
 from src.security import verify_access_token, verify_refresh_token
 
+# Схема авторизации security scheme для Bearer токенов
 http_bearer = HTTPBearer(auto_error=False)
 
 logger = logging.getLogger(__name__)
