@@ -42,7 +42,13 @@ async def get_current_user(
                 detail="Invalid token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-
+        if "roles" not in payload:
+            logger.warning(f"No roles in token for user {payload.get('sub')}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Any user must have a role",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         username: str = payload.get("sub")
         logger.debug(f"Username from token: '{username}'")
         if username is None:

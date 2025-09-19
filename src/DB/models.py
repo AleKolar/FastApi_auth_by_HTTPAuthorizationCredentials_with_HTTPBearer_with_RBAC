@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, DateTime, UUID, Boolean, func, ForeignKey
+from sqlalchemy import Integer, String, DateTime, UUID, Boolean, func, ForeignKey, ARRAY
 
 
 class Model(DeclarativeBase):
@@ -25,6 +25,7 @@ class UserOrm(Model):
         DateTime(timezone=True),
         server_default=func.now()
     )
+    roles: Mapped[List[str]] = mapped_column(ARRAY(String), default=[], nullable=False)
 
     refresh_tokens: Mapped[List["RefreshTokenOrm"]] = relationship("RefreshTokenOrm", back_populates="user")
 

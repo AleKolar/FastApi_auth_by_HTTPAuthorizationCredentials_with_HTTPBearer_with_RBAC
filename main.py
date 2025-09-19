@@ -15,6 +15,7 @@ from src.DB.database import create_tables, get_db
 from src.DB.models import UserOrm
 from src.auth_service import create_token_pair_service
 from src.dependencies import get_current_user, http_bearer
+from src.rbac import permission
 from src.repository import get_user_by_login, create_user, authenticate_user, get_user_by_email, \
     verify_refresh_token_in_db, delete_refresh_token
 
@@ -275,9 +276,29 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     logger.info(f"Response: {response.status_code}")
     return response
+
+# RBAC roles
+# Только для админов
+@user_router.get("/admin/dashboard")
+@permission(["admin"])
+async def admin_dashboard(current_user: UserResponse = Depends(get_current_user)):
+    return {"message": "Админская панель", "user": current_user.username}
+
+# Только для пользователей
+@user_router.get("/user/profile")
+@permission(["user"])
+async def user_profile(current_user: UserResponse = Depends(get_current_user)):
+    return {"message": "Профиль пользователя", "user": current_user.username}
+
+# Для всех аутентифицированных
+@user_router.get("/common/data")
+@permission(["user", "admin"])
+async def common_data(current_user: UserResponse = Depends(get_current_user)):
+    return {"message": "Общие данные", "user": current_user.username}
 app.include_router(main_router)
 app.include_router(user_router)
 app.include_router(header_router)
+
 
 # myvenv\Scripts\activate
 #

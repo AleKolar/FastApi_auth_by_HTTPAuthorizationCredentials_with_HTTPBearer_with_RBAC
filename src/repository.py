@@ -29,7 +29,8 @@ async def create_user(db: AsyncSession, user_data) -> dict[str, str | UserOrm]:
         email=user_data.email,
         age=user_data.age,
         login=user_data.login,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        roles=user_data.roles
     )
     db.add(db_user)
     await db.commit()

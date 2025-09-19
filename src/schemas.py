@@ -1,5 +1,7 @@
 import re
 import uuid
+from typing import List
+
 from pydantic import BaseModel, Field, ConfigDict, field_validator, computed_field
 from datetime import datetime
 
@@ -22,12 +24,14 @@ class CommonHeaders(BaseModel):
 
 
 LOGIN_PATTERN = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d_]{4,}$"
+VALID_ROLES = {"user", "admin"}
 
 class UserBase(BaseModel):
     username: str = Field(..., min_length=1, max_length=255)
     email: str = Field(..., min_length=1, max_length=255)
     age: int = Field(..., ge=0, le=150)
     login: str = Field(..., min_length=4, max_length=11)
+    roles: List[str] = Field(default=["user"])
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -81,5 +85,6 @@ class Token(TokenRefresh):
 # Для данных в токене (опционально)
 class TokenData(BaseModel):
     username: str | None = None
+    roles: List[str] = []
     exp: datetime | None = None
     type: str | None = None  # "access" или "refresh"

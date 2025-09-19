@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+from src.DB.models import UserOrm
 
 load_dotenv()
 
@@ -53,8 +54,14 @@ def _create_token(
     to_encode.update({"exp": expire, "type": token_type})
     return jwt.encode(to_encode, secret, algorithm=ALGORITHM)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(user: UserOrm, expires_delta: Optional[timedelta] = None) -> str:
     """Создает access token"""
+    data = {
+        "sub": user.login,
+        "username": user.username,
+        "email": user.email,
+        "roles": user.roles
+    }
     delta = expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     return _create_token(data, SECRET_KEY, delta, "access")
 
